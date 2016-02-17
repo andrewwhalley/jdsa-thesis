@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Fragment
+Bundle-SymbolicName: thesis.pmd.fragment
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: andrewwhalley
+Fragment-Host: net.sourceforge.pmd.eclipse.plugin;bundle-version="4.0.7"
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8

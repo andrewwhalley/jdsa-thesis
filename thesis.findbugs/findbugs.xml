@@ -1,0 +1,10 @@
+<FindbugsPlugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="findbugsplugin.xsd" 
+        pluginid="thesis.findbugs.DetectDataStructure"
+        provider="Andrew Whalley" 
+        website="http://findbugs.sourceforge.net">
+
+        <Detector class="thesis.findbugs.DetectDataStructure" reports="DETECT_DS" />
+        <BugPattern type="DETECT_DS" abbrev="DS" category="CORRECTNESS"/>
+
+</FindbugsPlugin>

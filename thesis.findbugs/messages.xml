@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MessageCollection xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="messagecollection.xsd">
+
+        <Plugin>
+                <ShortDescription>FindBugs Thesis Plugin</ShortDescription>
+                <Details>A detector for data structures in a Java program.</Details>
+        </Plugin>
+
+        <Detector class="thesis.findbugs.DetectDataStructure">
+                <Details>
+                        Finds instances of Data Structures.
+                </Details>
+
+        </Detector>
+
+        <BugPattern type="DETECT_DS_INIT">
+                <ShortDescription>Here is a DS declaration</ShortDescription>
+                <LongDescription>Here is a DS declaration</LongDescription>
+                <Details>
+<![CDATA[
+<p>People may not use the ideal data structure in their Java programs. This thesis project aims to create a static analysis advisor that will assist people in implementing more efficient data structures in their code.</p>
+]]>
+                </Details>
+        </BugPattern>
+    
+        <BugPattern type="DETECT_DS_USE">
+                <ShortDescription>Here is a DS use</ShortDescription>
+                <LongDescription>Here is a DS use</LongDescription>
+                <Details>
+<![CDATA[
+<p>People may not use the ideal data structure in their Java programs. This thesis project aims to create a static analysis advisor that will assist people in implementing more efficient data structures in their code.</p>
+]]>
+                </Details>
+        </BugPattern>
+
+        <BugCode abbrev="DS">Thesis</BugCode>
+</MessageCollection>
