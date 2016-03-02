@@ -74,7 +74,7 @@ public class Complexity {
     }
    
     public String toString() {
-        String output = "";
+        String output = "O(";
         if (expPart != null) {
         	output += expPart.toString() + " ";
         }
@@ -84,6 +84,8 @@ public class Complexity {
         if (logPart != null) {
             output += logPart.toString();
         }
+        output = output.trim();
+        output += ")";
         return output;
     }
     
@@ -91,9 +93,11 @@ public class Complexity {
     public static void main(String [] args) {
     	Complexity c1 = new Complexity(new Exponential(2), new Polynomial(2), null);
     	Complexity c2 = new Complexity(new Exponential(2), new Polynomial(1), new Logarithm());
+    	Complexity c3 = new Complexity(null, new Polynomial(0), null);
     	
     	System.out.println(c1.toString());
     	System.out.println(c2.toString());
+    	System.out.println(c3.toString());
     	
     	int bigger = c1.compareTo(c2);
     	System.out.println("Value of comparison is: " + bigger);
@@ -135,7 +139,7 @@ class Polynomial {
    
         // convert to string representation
         public String toString() {
-            if (deg == 0) return "";
+            if (deg == 0) return "1";
             if (deg == 1) return "n";
             return "n^" + deg;
         }

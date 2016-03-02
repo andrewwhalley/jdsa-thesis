@@ -30,74 +30,27 @@ import java.util.List;
 public class DetectDataStructure extends AbstractJavaRule {
 	
 	private RuleContext rc;
-	private ArrayList<DSUsage> usages;
+	private ArrayList<DSUsageContainer> dataStructures;
 	
-	
-	
-	private class DSUsage {
-		private String varName;
-		private String usageType;
-		private int beginLine;
-		private int endLine;
-		private String order;
-		
-		public DSUsage (String name, String usage, int beginLine, int endLine,
-				String order) {
-			setVarName(name);
-			setUsageType(usage);
-			setBeginLine(beginLine);
-			setEndLine(endLine);
-			setOrder(order);
+	private int getIndexOfDS (String DSName) {
+		int index = -1;
+		if (dataStructures == null) {
+			return index;
 		}
-
-		public String getVarName() {
-			return varName;
+		// Find index of ds related to DSName parameter
+		for (int i = 0; i < dataStructures.size(); i++) {
+			if (dataStructures.get(i).getVarName().equals(DSName)) {
+				index = i;
+				break;
+			}
 		}
-
-		public void setVarName(String varName) {
-			this.varName = varName;
-		}
-
-		public String getUsageType() {
-			return usageType;
-		}
-
-		public void setUsageType(String usageType) {
-			this.usageType = usageType;
-		}
-
-		public int getBeginLine() {
-			return beginLine;
-		}
-
-		public void setBeginLine(int beginLine) {
-			this.beginLine = beginLine;
-		}
-
-		public int getEndLine() {
-			return endLine;
-		}
-
-		public void setEndLine(int endLine) {
-			this.endLine = endLine;
-		}
-
-		public String getOrder() {
-			return order;
-		}
-
-		public void setOrder(String order) {
-			this.order = order;
-		}
-		
-		public String toString() {
-			return this.getVarName() + ", " + getBeginLine() + ", " + getEndLine() + 
-					", " + getUsageType() + ", " + getOrder();
-		}
+		return index;
 	}
 
     public Object visit(ASTVariableDeclaratorId node, Object data) {
-    	usages = new ArrayList<DSUsage>();
+    	if (dataStructures == null) {
+    		dataStructures = new ArrayList<DSUsageContainer>();
+    	}
     	VariableNameDeclaration varAnalyse = node.getNameDeclaration();
     	// List proof of concept
     	if ((!varAnalyse.getTypeImage().equals("List")) && (!varAnalyse.getTypeImage().equals("ArrayList"))
@@ -118,25 +71,25 @@ public class DetectDataStructure extends AbstractJavaRule {
             String usage = occurrence.getLocation().getImage();
             index = usage.lastIndexOf('.');
             // This means that no method has been invoked on the data structure.
-            // Check to see if it is a declaration or return value
             if (index == -1) {
+            	// Check to see if it is a declaration or return value
+            	if (getIndexOfDS(varName) == -1) {
+            		// declaration
+            		dataStructures.add(new DSUsageContainer(varName, getRuntimeType(occurrence)));
+            	}
             	// Could be a function returning the ds.
-            	usages.add(new DSUsage(varName, 
-            			getRuntimeType(occurrence), 
-                		occurrence.getLocation().getBeginLine(),
-                		occurrence.getLocation().getEndLine(),
-                		"1"));
+            	
             	continue;
             }
             usage = usage.substring(index+1, usage.length());
-            usages.add(new DSUsage(varName, usage, 
+            dataStructures.get(getIndexOfDS(varName)).addUsage(new DSUsage(usage, 
             		occurrence.getLocation().getBeginLine(),
-            		occurrence.getLocation().getEndLine(),
-            		"1"));
+            		occurrence.getLocation().getEndLine()));
         }
         System.out.println("--- Variables in use ---");
-        for (DSUsage dsu : usages) {
-        	System.out.println(dsu.toString());
+        System.out.println("--- Size of Array: " + dataStructures.size() + " ---");
+        for (DSUsageContainer dsuc : dataStructures) {
+        	System.out.println(dsuc.toString());
         }
         return data;
     }
@@ -161,7 +114,7 @@ public class DetectDataStructure extends AbstractJavaRule {
     	// Get the type declaration of the variable
     	ASTClassOrInterfaceType dsType = ase.
     			getFirstDescendantOfType(ASTClassOrInterfaceType.class);
-    	return dsType != null? "Type:"+dsType.getImage() : "";
+    	return dsType != null? dsType.getImage() : "";
     }
     
     private int insideLoop(NameOccurrence occurrence) {

@@ -1,0 +1,22 @@
+[2015-09-13 18:20:54] Executing startup tasks
+[2015-09-13 18:20:54] Product self.product.version
+[2015-09-13 18:20:54] Bundle org.eclipse.oomph.setup 1.1.0.v20150610-1559, build=1444, branch=9b846cb2fa74dc1b5b2c2252635dafb407165843, commit=9b846cb2fa74dc1b5b2c2252635dafb407165843
+[2015-09-13 18:20:54] Bundle org.eclipse.oomph.setup.core 1.1.0.v20150610-0657, build=1444, branch=9b846cb2fa74dc1b5b2c2252635dafb407165843, commit=9b846cb2fa74dc1b5b2c2252635dafb407165843
+[2015-09-13 18:20:54] Bundle org.eclipse.oomph.setup.p2 1.1.0.v20150609-0914, build=1444, branch=9b846cb2fa74dc1b5b2c2252635dafb407165843, commit=9b846cb2fa74dc1b5b2c2252635dafb407165843
+[2015-09-13 18:20:54] Performing Preference /instance/net.sourceforge.pmd.eclipse.plugin/net.sourceforge.pmd.eclipse.plugin.active_renderers = ,text
+[2015-09-13 18:20:54] Performing Preference /instance/net.sourceforge.pmd.eclipse.plugin/net.sourceforge.pmd.eclipse.plugin.active_rules = ,Detect data structures
+[2015-09-13 18:20:55] 
+[2015-09-13 21:51:09] Executing startup tasks
+[2015-09-13 21:51:09] Product self.product.version
+[2015-09-13 21:51:09] Bundle org.eclipse.oomph.setup 1.1.0.v20150610-1559, build=1444, branch=9b846cb2fa74dc1b5b2c2252635dafb407165843, commit=9b846cb2fa74dc1b5b2c2252635dafb407165843
+[2015-09-13 21:51:09] Bundle org.eclipse.oomph.setup.core 1.1.0.v20150610-0657, build=1444, branch=9b846cb2fa74dc1b5b2c2252635dafb407165843, commit=9b846cb2fa74dc1b5b2c2252635dafb407165843
+[2015-09-13 21:51:09] Bundle org.eclipse.oomph.setup.p2 1.1.0.v20150609-0914, build=1444, branch=9b846cb2fa74dc1b5b2c2252635dafb407165843, commit=9b846cb2fa74dc1b5b2c2252635dafb407165843
+[2015-09-13 21:51:09] Performing Preference /instance/net.sourceforge.pmd.eclipse.plugin/net.sourceforge.pmd.eclipse.plugin.active_rules = ,DetectDataStructures
+[2015-09-13 21:51:09] 
+[2015-09-13 22:00:54] Executing startup tasks
+[2015-09-13 22:00:56] Product self.product.version
+[2015-09-13 22:00:56] Bundle org.eclipse.oomph.setup 1.1.0.v20150610-1559, build=1444, branch=9b846cb2fa74dc1b5b2c2252635dafb407165843, commit=9b846cb2fa74dc1b5b2c2252635dafb407165843
+[2015-09-13 22:00:56] Bundle org.eclipse.oomph.setup.core 1.1.0.v20150610-0657, build=1444, branch=9b846cb2fa74dc1b5b2c2252635dafb407165843, commit=9b846cb2fa74dc1b5b2c2252635dafb407165843
+[2015-09-13 22:00:56] Bundle org.eclipse.oomph.setup.p2 1.1.0.v20150609-0914, build=1444, branch=9b846cb2fa74dc1b5b2c2252635dafb407165843, commit=9b846cb2fa74dc1b5b2c2252635dafb407165843
+[2015-09-13 22:00:56] Performing Preference /instance/net.sourceforge.pmd.eclipse.plugin/net.sourceforge.pmd.eclipse.plugin.active_rules = ,DetectDataStructures
+[2015-09-13 22:00:56] 

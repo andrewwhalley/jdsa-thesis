@@ -31,6 +31,7 @@ public class helloWorldDemo {
 		}
 		System.out.println(testVar);
 		System.out.println((testArrayList.get(testArrayList.size()-1) - testArrayList.get(0)));
+		System.out.println(testLinkedList.get(testLinkedList.size()-1));
 		return testArrayList;
 	}
 	
