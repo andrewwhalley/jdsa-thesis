@@ -20,14 +20,30 @@ public class helloWorldDemo {
 		testArrayList.add(1);
 		testLinkedList.add(1);
 		int j = 2;
+		String testNull = "";
 		while (j < 3) {
 			testArrayList.add(j);
 			testLinkedList.add(j);
 			j++;
 		}
+		while (testNull != null) {
+			if (j > 6) {
+				testNull = null;
+			}
+			j++;
+		}
 		for (int i=3; i<101; i++) {
 			testArrayList.add(i);
 			testLinkedList.add(i);
+		}
+		for (Integer k : testArrayList) {
+			testLinkedList.add(k + 1000);
+		}
+		for (Integer l : testLinkedList) {
+			testArrayList.add(l+1000);
+		}
+		for (int i=1; i<testLinkedList.size(); i++) {
+			testLinkedList.add(i^2 + 2000);
 		}
 		System.out.println(testVar);
 		System.out.println((testArrayList.get(testArrayList.size()-1) - testArrayList.get(0)));

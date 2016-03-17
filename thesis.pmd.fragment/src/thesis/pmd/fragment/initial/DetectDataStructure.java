@@ -14,7 +14,12 @@ import net.sourceforge.pmd.lang.java.ast.ASTExpression;
 import net.sourceforge.pmd.lang.java.ast.ASTForInit;
 import net.sourceforge.pmd.lang.java.ast.ASTForStatement;
 import net.sourceforge.pmd.lang.java.ast.ASTForUpdate;
+import net.sourceforge.pmd.lang.java.ast.ASTLiteral;
 import net.sourceforge.pmd.lang.java.ast.ASTMethodDeclaration;
+import net.sourceforge.pmd.lang.java.ast.ASTName;
+import net.sourceforge.pmd.lang.java.ast.ASTPostfixExpression;
+import net.sourceforge.pmd.lang.java.ast.ASTPrimaryPrefix;
+import net.sourceforge.pmd.lang.java.ast.ASTRelationalExpression;
 import net.sourceforge.pmd.lang.java.ast.ASTStatementExpression;
 import net.sourceforge.pmd.lang.java.ast.ASTVariableDeclarator;
 import net.sourceforge.pmd.lang.java.ast.ASTVariableDeclaratorId;
@@ -128,14 +133,22 @@ public class DetectDataStructure extends AbstractJavaRule {
                 return n.getBeginLine();
             } else if (n instanceof ASTWhileStatement) {
 //            	System.out.println("Inside While statement: " + n.getBeginLine());
+            	getWhileDetails(n);
             	return n.getBeginLine();
             } else if ( n instanceof ASTForStatement) {
-            	// Get the expression in the for statement
-            	// child nodes of interest: ForInit, Expression, ForUpdate
-            	ASTForInit afi = (ASTForInit) n.getFirstChildOfType(ASTForInit.class);
-            	ASTExpression ae = (ASTExpression) n.jjtGetChild(1);
-            	ASTForUpdate afu = (ASTForUpdate) n.jjtGetChild(2);
-            	
+            	/*
+            	 *  This can either be a:
+            	 *  for (Integer k : myList)
+            	 *  or
+            	 *  for (int i=1; i<n; i++)
+            	 *  style of for loop.
+            	 *  If it is the latter there should be a ForInit child of n.
+            	 */
+            	if (n.hasDescendantOfType(ASTForInit.class)) {
+            		getForInitDetails((ASTForInit) n.getFirstChildOfType(ASTForInit.class));
+            	} else {
+            		getForStatementDetails(n);
+            	}
 //            	ASTExpression expression = (ASTExpression)n.jjtGetChild(0);
 //            	System.out.println("Inside For statement on line: " + n.getBeginLine());
             	return n.getBeginLine();
@@ -144,7 +157,13 @@ public class DetectDataStructure extends AbstractJavaRule {
                  * init part is not technically inside the loop.
                  * Skip parent ASTForStatement but continue higher
                  * up to detect nested loops
+                 * 
+                 * This is a for of the: for(int i=1;i<n;i++) variety
+                 * Want to delve into the Expression and update part
+                 * to calculate the complexity the loop adds
                  */
+//            	System.out.println("In ForInit, Line - " + n.getBeginLine());
+            	getForInitDetails(n);
                 n = n.jjtGetParent();
             } else if (n.jjtGetParent() instanceof ASTForStatement
                 && n.jjtGetParent().jjtGetNumChildren() > 1
@@ -160,6 +179,97 @@ public class DetectDataStructure extends AbstractJavaRule {
             n = n.jjtGetParent();
         }
         return -1;
+    }
+    
+    /**
+     * While statements are challenging. The increment amount isn't 
+	 * specified in the expression itself. The body of the loop is
+	 * stored in a statement node and most likely contains the 
+	 * increment part. This part can occur multiple times however:
+	 * 
+	 * while (j < 1000) {
+	 * 	if (j%6 == 2) {
+	 * 		j += 16;
+	 * 	} else {
+	 * 		j++;
+	 * 	}
+	 * 	j+=7;
+	 * }
+	 * 
+	 *  This is challenging to calculate the complexity of. That's before
+	 *  considering non literal upper bounds and things like files:
+	 *  
+	 *  while (fileReader.readLine != null) { ... }
+     * 
+     * @param n - ASTWhileStatement node
+     */
+    private void getWhileDetails(Node n) {
+		ASTRelationalExpression whileComp = (ASTRelationalExpression) 
+				n.getFirstDescendantOfType(ASTRelationalExpression.class);
+		if (whileComp == null) {
+			System.err.println("An error occurred processing while loop");
+			return;
+		}
+		String comp = whileComp.getImage();
+		
+	}
+
+	/**
+	 * We have a ForInit node. A child will give the starting 
+	 * value of the loop variable.
+	 * Going up to the parent gives the ForStatement node which
+	 * we can then go into the children nodes:
+	 * Expression - gives us the upper bound of the loop variable
+	 * ForUpdate - gives us the rate the loop variable changes
+	 * 
+	 * This code makes the assumption that the loop variable is not
+	 * incremented in the for statement itself as well. It also ignores
+	 * any continue or break lines, analysing the loop as if it were to
+	 * run from beginning to end.
+     * 
+     * @param n - ForInit node
+     */
+    private void getForInitDetails(Node n) {
+    	ASTPrimaryPrefix ppInit = (ASTPrimaryPrefix) n.getFirstDescendantOfType(ASTPrimaryPrefix.class);
+    	ASTForStatement afs = (ASTForStatement) n.getFirstParentOfType(ASTForStatement.class);
+    	// 0 is ForInit, 1 is Expression, 2 is ForUpdate
+    	ASTExpression ae = (ASTExpression) afs.jjtGetChild(1);
+    	ASTForUpdate afu = (ASTForUpdate) afs.jjtGetChild(2);
+    	// There are always 2 children of the relational expression, the 2nd contains the upper bound we're after
+    	ASTRelationalExpression expComparator = (ASTRelationalExpression) ae.getFirstChildOfType(ASTRelationalExpression.class);
+    	ASTPrimaryPrefix ppExp = (ASTPrimaryPrefix) expComparator.jjtGetChild(1).getFirstDescendantOfType(ASTPrimaryPrefix.class);
+    	// The expression will either be a literal number or a variable representing a number
+    	String upperBound = "";
+    	if (ppExp.hasDescendantOfType(ASTLiteral.class)) {
+    		upperBound = ppExp.getFirstDescendantOfType(ASTLiteral.class).getImage();
+    	} else if (ppExp.hasDescendantOfType(ASTName.class)) {
+    		upperBound = ppExp.getFirstDescendantOfType(ASTName.class).getImage();
+    	}
+    	ASTPostfixExpression updateExp = (ASTPostfixExpression) afu.getFirstDescendantOfType(ASTPostfixExpression.class);
+    	String initial = "";
+    	if (ppInit.hasDescendantOfType(ASTLiteral.class)) {
+    		initial = ppInit.getFirstDescendantOfType(ASTLiteral.class).getImage();
+    	} else if (ppInit.hasDescendantOfType(ASTName.class)) {
+    		initial = ppInit.getFirstDescendantOfType(ASTName.class).getImage();
+    	}
+    	System.out.println("start: " + initial + " - end: " + upperBound + " - update: " + updateExp.getImage());
+    }
+    
+    /**
+     * We have a ForStatement node. There is a child that tells us the
+	 * loop variable type and another child that gives us the structure
+	 * being iterated through
+	 * This is of the form: for (type i : ds<type>)  
+	 * 
+     * @param n - ASTForStatement node
+     */
+    private void getForStatementDetails(Node n) {
+    	ASTExpression forExp = (ASTExpression) n.getFirstDescendantOfType(ASTExpression.class);
+    	String bound = "";
+    	if (forExp != null) {
+    		bound = forExp.getFirstDescendantOfType(ASTName.class).getImage();
+    	}
+    	System.out.println("Structure being iterated through: " + bound);
     }
     
     

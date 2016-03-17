@@ -28,8 +28,8 @@ public class DSUsageContainer {
 		complexitiesRef = JavaCollectionsComplexities.DSDetermination(varType);
 		// Check if error has occurred
 		if (complexitiesRef == null) {
-			System.out.println("Error has occurred. Cannot process this" + 
-					"Variable Type: " + varType);
+			System.out.println("Error has occurred. Cannot process this " + 
+					"Variable: " + varName + " of type: " + varType);
 		}
 		
 	}
