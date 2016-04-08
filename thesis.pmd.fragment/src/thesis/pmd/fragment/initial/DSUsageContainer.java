@@ -15,14 +15,17 @@ public class DSUsageContainer {
 	private final String ls = System.getProperty("line.separator");
 	private String varName;
 	private String varType;
+	private ArrayList<String> varGenerics;
 	private ArrayList<DSUsage> usages;
 	private Complexity finalComplexity;
 	// Retrieve a reference to the complexities map for this variable type
 	private HashMap<String, Complexity> complexitiesRef;
 	
-	public DSUsageContainer(String varName, String varType) {
+	public DSUsageContainer(String varName, String varType, ArrayList<String> varGenerics) {
 		this.setVarName(varName);
 		this.setVarType(varType);
+		this.varGenerics = new ArrayList<String>(varGenerics);
+		this.finalComplexity = new Complexity();
 		// Ensure ArrayList of usages is not null
 		this.usages = new ArrayList<DSUsage>();
 		complexitiesRef = JavaCollectionsComplexities.DSDetermination(varType);
@@ -45,6 +48,10 @@ public class DSUsageContainer {
 	public String getVarName() {
 		return varName;
 	}
+	
+	public ArrayList<String> getGenTypes() {
+		return this.varGenerics;
+	}
 
 	public void setVarName(String varName) {
 		this.varName = varName;
@@ -54,9 +61,10 @@ public class DSUsageContainer {
 		return new ArrayList<DSUsage>(this.usages);
 	}
 	
-	public void addUsage(DSUsage dsu) {
+	public void addUsage(DSUsage dsu, Complexity loopComplexity) {
 		// Need to get the complexity of the usage
 		dsu.setComplexity(complexitiesRef.get(dsu.getUsageType()));
+		dsu.setCalcComplexity(loopComplexity);
 		this.usages.add(dsu);
 	}
 	
@@ -76,8 +84,38 @@ public class DSUsageContainer {
 	}
 	
 	public String toString() {
-		return this.getVarName() + " - Type = " + this.getVarType() + ls + 
+		String generics = "";
+		for (int i=0; i<varGenerics.size(); i++) {
+			generics += varGenerics.get(i);
+			if (i+1 < varGenerics.size()) {
+				generics += ", ";
+			}
+		}
+		return this.getVarName() + " - Type = " + this.getVarType() + 
+				"<" + generics + ">" + ls + 
 				"\t Usages = " + this.usagesToString() + 
-				"Total Complexity = :^) yet to be calculated";
+				"Total Complexity = " + getFinalComplexity();
+	}
+	
+	public void finalComplexityCalc() {
+		for (DSUsage dsu : usages) {
+			this.finalComplexity.add(dsu.getCalcComplexity());
+		}
+	}
+	
+	public Complexity getFinalComplexity() {
+		return this.finalComplexity;
+	}
+	
+	public void buildMapping(ArrayList<DSUsage> usagesToMap) {
+		for (DSUsage dsu : usagesToMap) {
+			this.addUsage(new DSUsage(dsu.getUsageType(), dsu.getBeginLine(),
+					dsu.getEndLine()), new Complexity());
+		}
+		this.finalComplexityCalc();
+	}
+	
+	public int compareUsages(DSUsageContainer mapping) {
+		return 0;
 	}
 }

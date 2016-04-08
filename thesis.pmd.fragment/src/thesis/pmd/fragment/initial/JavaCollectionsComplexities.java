@@ -24,6 +24,7 @@ public final class JavaCollectionsComplexities {
 		
 		put("get", new Complexity(null, new Polynomial(0), null)); // O(1)
 		put("add", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("size", new Complexity(null, new Polynomial(0), null)); // O(1)
 		put("contains", new Complexity(null, new Polynomial(1), null)); // O(n)
 		put("next", new Complexity(null, new Polynomial(0), null)); // O(1)
 		put("remove", new Complexity(null, new Polynomial(1), null)); // O(n) - Remove Object
@@ -41,6 +42,7 @@ public final class JavaCollectionsComplexities {
 		
 		put("get", new Complexity(null, new Polynomial(1), null)); // O(n)
 		put("add", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("size", new Complexity(null, new Polynomial(0), null)); // O(1)
 		put("contains", new Complexity(null, new Polynomial(1), null)); // O(n)
 		put("next", new Complexity(null, new Polynomial(0), null)); // O(1)
 		put("remove", new Complexity(null, new Polynomial(0), null)); // O(1) - Remove Object

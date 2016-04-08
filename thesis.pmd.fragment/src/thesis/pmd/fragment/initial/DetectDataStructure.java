@@ -1,6 +1,7 @@
 package thesis.pmd.fragment.initial;
 // thesis.pmd.fragment.initial.DetectDataStructure
 import net.sourceforge.pmd.lang.symboltable.NameOccurrence;
+import net.sourceforge.pmd.lang.symboltable.ScopedNode;
 import net.sourceforge.pmd.RuleContext;
 import net.sourceforge.pmd.lang.ast.Node;
 import net.sourceforge.pmd.lang.dfa.DataFlowNode;
@@ -14,8 +15,11 @@ import net.sourceforge.pmd.lang.java.ast.ASTExpression;
 import net.sourceforge.pmd.lang.java.ast.ASTForInit;
 import net.sourceforge.pmd.lang.java.ast.ASTForStatement;
 import net.sourceforge.pmd.lang.java.ast.ASTForUpdate;
+import net.sourceforge.pmd.lang.java.ast.ASTFormalParameter;
+import net.sourceforge.pmd.lang.java.ast.ASTFormalParameters;
 import net.sourceforge.pmd.lang.java.ast.ASTLiteral;
 import net.sourceforge.pmd.lang.java.ast.ASTMethodDeclaration;
+import net.sourceforge.pmd.lang.java.ast.ASTMethodDeclarator;
 import net.sourceforge.pmd.lang.java.ast.ASTName;
 import net.sourceforge.pmd.lang.java.ast.ASTPostfixExpression;
 import net.sourceforge.pmd.lang.java.ast.ASTPrimaryPrefix;
@@ -36,6 +40,7 @@ public class DetectDataStructure extends AbstractJavaRule {
 	
 	private RuleContext rc;
 	private ArrayList<DSUsageContainer> dataStructures;
+	private ArrayList<DSUsageContainer> comparisonStructures;
 	
 	private int getIndexOfDS (String DSName) {
 		int index = -1;
@@ -56,6 +61,9 @@ public class DetectDataStructure extends AbstractJavaRule {
     	if (dataStructures == null) {
     		dataStructures = new ArrayList<DSUsageContainer>();
     	}
+    	if (comparisonStructures == null) {
+    		comparisonStructures = new ArrayList<DSUsageContainer>();
+    	}
     	VariableNameDeclaration varAnalyse = node.getNameDeclaration();
     	// List proof of concept
     	if ((!varAnalyse.getTypeImage().equals("List")) && (!varAnalyse.getTypeImage().equals("ArrayList"))
@@ -63,16 +71,14 @@ public class DetectDataStructure extends AbstractJavaRule {
     		return data;
     	}
     	int index = 0;
-    	int loopLine;
+    	Complexity loopComplexity;
     	String varName = varAnalyse.getImage();
     	String varDecType = varAnalyse.getTypeImage();
     	// Loop through all occurrences of the variable
         for (NameOccurrence occurrence : node.getUsages()) {
-            loopLine = Integer.MIN_VALUE;
-            // Check if the variable use is in a loop
-            if ((loopLine = insideLoop(occurrence)) > -1) {
+            // Will be null if the variable use is not in a loop
+        	loopComplexity = insideLoop(occurrence);
 //        		System.out.println("Inside loop on line: " + loopLine);
-        	}
             String usage = occurrence.getLocation().getImage();
             index = usage.lastIndexOf('.');
             // This means that no method has been invoked on the data structure.
@@ -80,23 +86,64 @@ public class DetectDataStructure extends AbstractJavaRule {
             	// Check to see if it is a declaration or return value
             	if (getIndexOfDS(varName) == -1) {
             		// declaration
-            		dataStructures.add(new DSUsageContainer(varName, getRuntimeType(occurrence)));
+            		// get the generics type(s) for the DS
+            		dataStructures.add(new DSUsageContainer(varName, 
+            				getRuntimeType(occurrence), 
+            				getGenericsTypes(occurrence.getLocation())));
             	}
             	// Could be a function returning the ds.
             	
             	continue;
             }
+            // Need to check if it is a first usage but it is not a declaration
+            // This can occur if the DS is passed to another function
+            if (index != -1 && getIndexOfDS(varName) == -1) {
+            	// In runtime type need to match up with varName. Maybe create a new method all together to deal
+            	// with this specific situation... 
+            	ArrayList<String> types = getMethodParamType(occurrence, varName);
+            	if (types == null || types.isEmpty()) {
+            		// Something went wrong :|
+            		break;
+            	}
+            	String runtimeType = types.remove(0);
+            	dataStructures.add(new DSUsageContainer(varName, runtimeType,
+            			types));
+            }
             usage = usage.substring(index+1, usage.length());
-            dataStructures.get(getIndexOfDS(varName)).addUsage(new DSUsage(usage, 
+            DSUsage currentUsage = new DSUsage(usage,
             		occurrence.getLocation().getBeginLine(),
-            		occurrence.getLocation().getEndLine()));
+            		occurrence.getLocation().getEndLine());
+            dataStructures.get(getIndexOfDS(varName)).addUsage(currentUsage, loopComplexity);
         }
         System.out.println("--- Variables in use ---");
         System.out.println("--- Size of Array: " + dataStructures.size() + " ---");
         for (DSUsageContainer dsuc : dataStructures) {
+        	dsuc.finalComplexityCalc();
         	System.out.println(dsuc.toString());
+        	// Get the Data Structure(s) we can compare each usage against
+        	for (String s : JavaCollectionsComplexities.DSToCompareTo(dsuc.getVarType())) {
+        		System.out.println("Comparing DS: " + s);
+        		comparisonStructures.add(new DSUsageContainer("compStructure", s, dsuc.getGenTypes()));
+        	}
+        	// Do the comparison
+        	for (DSUsageContainer mapped : comparisonStructures) {
+//        		mapped.addUsage();
+        	}
         }
+        
         return data;
+    }
+    
+    private ArrayList<String> getGenericsTypes(ScopedNode coi) {
+    	List<ASTClassOrInterfaceType> gens = coi.
+				findDescendantsOfType(ASTClassOrInterfaceType.class);
+		ArrayList<String> genNames = new ArrayList<String>();
+		if (gens != null) {
+			for (ASTClassOrInterfaceType coit : gens) {
+				genNames.add(coit.getImage());
+			}
+		}
+		return genNames;
     }
     
     private String getRuntimeType(NameOccurrence occurrence) {
@@ -111,9 +158,9 @@ public class DetectDataStructure extends AbstractJavaRule {
     				avd.getFirstDescendantOfType(ASTClassOrInterfaceType.class);
     		System.out.println(dsType2 != null ? "Type: "+dsType2.getImage() : ":(");
     	}
-    	// Check if the variable is a return value
+    	
     	if (ase == null) {
-    		return "ReturnValue";
+    		// I don't know if this will occur anymore
     	}
     	
     	// Get the type declaration of the variable
@@ -122,63 +169,83 @@ public class DetectDataStructure extends AbstractJavaRule {
     	return dsType != null? dsType.getImage() : "";
     }
     
-    private int insideLoop(NameOccurrence occurrence) {
-        Node n = occurrence.getLocation().jjtGetParent();
-        if (n == null) {
-        	System.err.println("n is null");
+    private ArrayList<String> getMethodParamType(NameOccurrence occurrence, String varName) {
+    	// Check the method parameters for a compatible class/interface
+		ASTMethodDeclaration amd = occurrence.getLocation().
+				getFirstParentOfType(ASTMethodDeclaration.class);
+		if (amd == null) {
+			// The variable must be a return value
+    		return null;
+		}
+		ASTFormalParameters params = amd.getFirstDescendantOfType(ASTFormalParameters.class);
+		if (params == null) {
+			return null;
+		}
+		List<ASTClassOrInterfaceType> coiParams = params.findDescendantsOfType(ASTClassOrInterfaceType.class);
+		if (coiParams.isEmpty()) {
+			return null;
+		}
+		ArrayList<String> type = new ArrayList<String>();
+		String currType = "";
+		// Need to check for lists/sets/maps/queues 
+		for (int i=0; i<coiParams.size(); i++) {
+			currType = coiParams.get(i).getImage();
+			ASTFormalParameter afp = coiParams.get(i).getFirstParentOfType(ASTFormalParameter.class);
+			if (afp == null) {
+				// this shouldn't occur
+				continue;
+			}
+			ASTVariableDeclaratorId avdi = afp.getFirstChildOfType(ASTVariableDeclaratorId.class);
+			if (avdi == null) {
+				// This shouldn't occur either
+				continue;
+			}
+			String currVarName = avdi.getImage();
+			// Check for List implementations
+			if ((currType.equals("LinkedList") || currType.equals("ArrayList")) && currVarName.equals(varName)) {
+				type.add(currType);
+				// Get generics for the LL or AL
+				break;
+			}
+			// Check for List interface
+			if (currType.equals("List") && currVarName.equals(varName)) {
+				// We need to determine where this was called from. This is harder.
+				// Get the generics type that the List is using
+				// All of the ASTClassOrInterface children for 
+				break;
+			}
+		}
+    	return type;
+    }
+    
+    private Complexity insideLoop(NameOccurrence occurrence) {
+        //Node n = occurrence.getLocation().jjtGetParent();
+    	Complexity overallLoopComplexity = new Complexity();
+        List<ASTDoStatement> doParents = occurrence.getLocation().getParentsOfType(ASTDoStatement.class);
+        List<ASTWhileStatement> whileParents = occurrence.getLocation().getParentsOfType(ASTWhileStatement.class);
+        List<ASTForStatement> forParents = occurrence.getLocation().getParentsOfType(ASTForStatement.class);
+        for (ASTDoStatement n : doParents) {
+        	// Need to deal with Do statements later 
         }
-        while (n != null) {
-            if (n instanceof ASTDoStatement) {
-//            	System.out.println("Inside Do statement: " + n.getBeginLine());
-                return n.getBeginLine();
-            } else if (n instanceof ASTWhileStatement) {
-//            	System.out.println("Inside While statement: " + n.getBeginLine());
-            	getWhileDetails(n);
-            	return n.getBeginLine();
-            } else if ( n instanceof ASTForStatement) {
-            	/*
-            	 *  This can either be a:
-            	 *  for (Integer k : myList)
-            	 *  or
-            	 *  for (int i=1; i<n; i++)
-            	 *  style of for loop.
-            	 *  If it is the latter there should be a ForInit child of n.
-            	 */
-            	if (n.hasDescendantOfType(ASTForInit.class)) {
-            		getForInitDetails((ASTForInit) n.getFirstChildOfType(ASTForInit.class));
-            	} else {
-            		getForStatementDetails(n);
-            	}
-//            	ASTExpression expression = (ASTExpression)n.jjtGetChild(0);
-//            	System.out.println("Inside For statement on line: " + n.getBeginLine());
-            	return n.getBeginLine();
-            } else if (n instanceof ASTForInit) {
-                /*
-                 * init part is not technically inside the loop.
-                 * Skip parent ASTForStatement but continue higher
-                 * up to detect nested loops
-                 * 
-                 * This is a for of the: for(int i=1;i<n;i++) variety
-                 * Want to delve into the Expression and update part
-                 * to calculate the complexity the loop adds
-                 */
-//            	System.out.println("In ForInit, Line - " + n.getBeginLine());
-            	getForInitDetails(n);
-                n = n.jjtGetParent();
-            } else if (n.jjtGetParent() instanceof ASTForStatement
-                && n.jjtGetParent().jjtGetNumChildren() > 1
-                && n == n.jjtGetParent().jjtGetChild(1)) {
-                // it is the second child of a ForStatement - which means
-                // we are dealing with a for-each construct
-                // In that case, we can ignore this allocation expression, as the second child
-                // is the expression, over which to iterate.
-                // Skip this parent but continue higher up
-                // to detect nested loops
-                n = n.jjtGetParent();
-            }
-            n = n.jjtGetParent();
+        for (ASTWhileStatement n : whileParents) {
+        	overallLoopComplexity.add(getWhileDetails(n));
         }
-        return -1;
+        for (ASTForStatement n : forParents) {
+        	/*
+        	 *  This can either be a:
+        	 *  for (Integer k : myList)
+        	 *  or
+        	 *  for (int i=1; i<n; i++)
+        	 *  style of for loop.
+        	 *  If it is the latter there should be a ForInit child of n.
+        	 */
+        	if (n.hasDescendantOfType(ASTForInit.class)) {
+        		overallLoopComplexity.add(getForInitDetails((ASTForInit) n.getFirstChildOfType(ASTForInit.class)));
+        	} else {
+        		overallLoopComplexity.add(getForStatementDetails(n));
+        	}
+        }
+        return overallLoopComplexity;
     }
     
     /**
@@ -203,15 +270,18 @@ public class DetectDataStructure extends AbstractJavaRule {
      * 
      * @param n - ASTWhileStatement node
      */
-    private void getWhileDetails(Node n) {
+    private Complexity getWhileDetails(Node n) {
 		ASTRelationalExpression whileComp = (ASTRelationalExpression) 
 				n.getFirstDescendantOfType(ASTRelationalExpression.class);
 		if (whileComp == null) {
 			System.err.println("An error occurred processing while loop");
-			return;
+			// Just make it constant
+			return new Complexity(new Polynomial(0));
 		}
 		String comp = whileComp.getImage();
-		
+		// Need to check the loop value. If it is a number it is O(C) = O(1)
+		// If it is a variable it is O(n) - default for now
+		return new Complexity();
 	}
 
 	/**
@@ -229,7 +299,7 @@ public class DetectDataStructure extends AbstractJavaRule {
      * 
      * @param n - ForInit node
      */
-    private void getForInitDetails(Node n) {
+    private Complexity getForInitDetails(Node n) {
     	ASTPrimaryPrefix ppInit = (ASTPrimaryPrefix) n.getFirstDescendantOfType(ASTPrimaryPrefix.class);
     	ASTForStatement afs = (ASTForStatement) n.getFirstParentOfType(ASTForStatement.class);
     	// 0 is ForInit, 1 is Expression, 2 is ForUpdate
@@ -253,6 +323,9 @@ public class DetectDataStructure extends AbstractJavaRule {
     		initial = ppInit.getFirstDescendantOfType(ASTName.class).getImage();
     	}
     	System.out.println("start: " + initial + " - end: " + upperBound + " - update: " + updateExp.getImage());
+    	// check if upperbound is a digit (the first value is all we need to check. 
+    	// If it is a digit this loop is constant time, otherwise it is O(m)
+    	return Character.digit(upperBound.charAt(0),10) < 0 ? new Complexity(new Polynomial(1)) : new Complexity(new Polynomial(0)); 
     }
     
     /**
@@ -263,13 +336,15 @@ public class DetectDataStructure extends AbstractJavaRule {
 	 * 
      * @param n - ASTForStatement node
      */
-    private void getForStatementDetails(Node n) {
+    private Complexity getForStatementDetails(Node n) {
     	ASTExpression forExp = (ASTExpression) n.getFirstDescendantOfType(ASTExpression.class);
     	String bound = "";
     	if (forExp != null) {
     		bound = forExp.getFirstDescendantOfType(ASTName.class).getImage();
     	}
     	System.out.println("Structure being iterated through: " + bound);
+    	// This should be automatically O(m)
+    	return new Complexity(new Polynomial(1));
     }
     
     

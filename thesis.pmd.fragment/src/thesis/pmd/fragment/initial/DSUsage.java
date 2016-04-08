@@ -19,6 +19,8 @@ public class DSUsage {
 		setUsageType(usage);
 		setBeginLine(beginLine);
 		setEndLine(endLine);
+		this.complexity = new Complexity();
+		this.calcComplexity = new Complexity();
 	}
 
 	public String getUsageType() {
@@ -57,8 +59,9 @@ public class DSUsage {
 		return this.calcComplexity;
 	}
 	
-	public void setCalcComplexity() {
-		
+	public void setCalcComplexity(Complexity C) {
+		this.complexity.add(C);
+		this.calcComplexity.add(this.complexity);
 	}
 	
 	public String toString() {
