@@ -13,12 +13,21 @@ public class DSUsage {
 	private int beginLine;
 	private int endLine;
 	private Complexity complexity;
+	private Complexity loopComplexity;
 	private Complexity calcComplexity;
 	
 	public DSUsage (String usage, int beginLine, int endLine) {
 		setUsageType(usage);
 		setBeginLine(beginLine);
 		setEndLine(endLine);
+		this.complexity = new Complexity();
+		this.calcComplexity = new Complexity();
+	}
+	
+	public DSUsage(DSUsage dsu) {
+		setUsageType(dsu.getUsageType());
+		setBeginLine(dsu.getBeginLine());
+		setEndLine(dsu.getEndLine());
 		this.complexity = new Complexity();
 		this.calcComplexity = new Complexity();
 	}
@@ -52,16 +61,23 @@ public class DSUsage {
 	}
 
 	public void setComplexity(Complexity comp) {
-		this.complexity = comp;
+		this.complexity = new Complexity(comp);
 	}
 	
 	public Complexity getCalcComplexity() {
 		return this.calcComplexity;
 	}
 	
+	public Complexity getLoopComplexity() {
+		return this.loopComplexity;
+	}
+	
 	public void setCalcComplexity(Complexity C) {
-		this.complexity.add(C);
-		this.calcComplexity.add(this.complexity);
+		this.loopComplexity = new Complexity(C);
+		// Get around immutability of Complexity
+		Complexity tempComp = new Complexity(this.complexity);
+		tempComp.multiply(this.loopComplexity);
+		this.calcComplexity.multiply(tempComp);
 	}
 	
 	public String toString() {
@@ -73,6 +89,7 @@ public class DSUsage {
 				", " + compString +
 				", " + this.getBeginLine() + 
 				", " + this.getEndLine() + 
+				", " + getLoopComplexity() +
 				", " + calcCompString;
 	}
 }

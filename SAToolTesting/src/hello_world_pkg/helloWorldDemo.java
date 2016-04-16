@@ -58,6 +58,19 @@ public class helloWorldDemo {
 		for (int i=1; i<testArrayList.size(); i++) {
 			testLinkedList.add(i^2 + 2000);
 		}
+		int tempVar = 0;
+		for (int i = 0; i < testLinkedList.size(); i++) {
+			tempVar = testLinkedList.get(i);
+			if (testArrayList.size() < tempVar) {
+				testArrayList.remove(tempVar);
+			}
+		}
+		// Add a method that isn't available for LinkedLists 
+		// (It just adds an O() method and doesn't error - Expected behaviour)
+		testArrayList.ensureCapacity(testArrayList.size());
+		// Testing chained methods (Should just be get - it is :) )
+		testArrayList.get(0).intValue();
+		
 		System.out.println("Past Array list size loop");
 		System.out.println(testVar);
 		System.out.println((testArrayList.get(testArrayList.size()-1) - testArrayList.get(0)));

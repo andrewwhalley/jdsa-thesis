@@ -16,38 +16,102 @@ public final class JavaCollectionsComplexities {
 
 	public static final HashMap<String, Complexity> ArrayListComplexities = new HashMap<String, Complexity>() {
 		/**
-		 * 
+		 * From the Java Docs (http://docs.oracle.com/javase/7/docs/api/java/util/ArrayList.html):
+		 * The size, isEmpty, get, set, iterator, and listIterator operations run in constant time. 
+		 * The add operation runs in amortized constant time, that is, adding n elements requires O(n) time. 
+		 * All of the other operations run in linear time (roughly speaking). 
+		 * The constant factor is low compared to that for the LinkedList implementation.
+		 * Also:
+		 * http://stackoverflow.com/questions/322715/when-to-use-linkedlist-over-arraylist
 		 */
 		private static final long serialVersionUID = -5175333366556841249L;
 
 	{
-		
-		put("get", new Complexity(null, new Polynomial(0), null)); // O(1)
+		// Note that adding at a given index is O(n), which is the same for LinkedList
+		// So it has not been included
 		put("add", new Complexity(null, new Polynomial(0), null)); // O(1)
-		put("size", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("addAll", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("clear", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("clone", new Complexity(null, new Polynomial(1), null)); // O(n)
 		put("contains", new Complexity(null, new Polynomial(1), null)); // O(n)
-		put("next", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ensureCapacity", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("get", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("indexOf", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("isEmpty", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("iterator", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("lastIndexOf", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("listIterator", new Complexity(null, new Polynomial(0), null)); // O(1)
 		put("remove", new Complexity(null, new Polynomial(1), null)); // O(n) - Remove Object
-		put("Iterator.remove", new Complexity(null, new Polynomial(1), null)); // O(n) - Remove with Iterator
+		put("removeAll", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("removeRange", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("retainAll", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("set", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("size", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("subList", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("toArray", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("trimToSize", new Complexity(null, new Polynomial(1), null)); // O(n)
 		
+		// Methods for the ArrayList iterator
+		put("Iterator.hasNext", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("Iterator.next", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("Iterator.remove", new Complexity(null, new Polynomial(1), null)); // O(n) - Remove with Iterator
+		// Methods for the ArrayList listIterator
+		put("ListIterator.add", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("ListIterator.hasNext", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.hasPrevious", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.next", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.nextIndex", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.previous", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.previousIndex", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.remove", new Complexity(null, new Polynomial(1), null)); // O(n) - Remove with Iterator
+		put("ListIterator.set", new Complexity(null, new Polynomial(0), null)); // O(1)
 	}};
 	
 	public static final HashMap<String, Complexity> LinkedListComplexities = new HashMap<String, Complexity>() {
 		/**
+		 * Java Docs (http://docs.oracle.com/javase/7/docs/api/java/util/Deque.html)
+		 * All of the operations perform as could be expected for a doubly-linked list. 
+		 * Operations that index into the list will traverse the list from the
+		 * beginning or the end, whichever is closer to the specified index.
 		 * 
+		 * Note: Deque methods have been ignored as they cannot be compared with ArrayLists
 		 */
 		private static final long serialVersionUID = -7487937071188392987L;
 
 	{
-		
-		put("get", new Complexity(null, new Polynomial(1), null)); // O(n)
+		// Note that adding at a given index is O(n), which is the same for ArrayList
+		// So it has not been included
 		put("add", new Complexity(null, new Polynomial(0), null)); // O(1)
-		put("size", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("addAll", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("clear", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("clone", new Complexity(null, new Polynomial(1), null)); // O(n)
 		put("contains", new Complexity(null, new Polynomial(1), null)); // O(n)
-		put("next", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("get", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("indexOf", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("isEmpty", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("iterator", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("lastIndexOf", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("listIterator", new Complexity(null, new Polynomial(0), null)); // O(1)
 		put("remove", new Complexity(null, new Polynomial(0), null)); // O(1) - Remove Object
-		put("Iterator.remove", new Complexity(null, new Polynomial(0), null)); // O(1) - Remove with Iterator
+		put("removeAll", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("set", new Complexity(null, new Polynomial(1), null)); // O(n) (Has to find element before it can replace)
+		put("size", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("toArray", new Complexity(null, new Polynomial(1), null)); // O(1)
 		
+		// Methods for the LinkedList Iterator
+		put("Iterator.hasNext", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("Iterator.next", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("Iterator.remove", new Complexity(null, new Polynomial(0), null)); // O(1) - Remove with Iterator
+		// Methods for the LinkedList ListIterator
+		put("ListIterator.add", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.hasNext", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.hasPrevious", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.next", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.nextIndex", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.previous", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.previousIndex", new Complexity(null, new Polynomial(0), null)); // O(1)
+		put("ListIterator.remove", new Complexity(null, new Polynomial(1), null)); // O(1) - Remove with Iterator
+		put("ListIterator.set", new Complexity(null, new Polynomial(0), null)); // O(1)
 	}};
 	
 	public static final HashMap<String, Complexity> CopyOnWriteArrayListComplexities = new HashMap<String, Complexity>() {{

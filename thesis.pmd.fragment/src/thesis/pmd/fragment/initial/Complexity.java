@@ -16,6 +16,19 @@ public class Complexity {
      */
     public Complexity() {
     }
+    
+    /**
+     * Need this because Complexity is immutable
+     * @param C
+     */
+    public Complexity(Complexity C) {
+    	if (C == null) {
+    		return;
+    	}
+    	this.polyPart = C.polyPart;
+    	this.expPart = C.expPart;
+    	this.logPart = C.logPart;
+    }
    
     public Complexity(Exponential e, Polynomial p, Logarithm l) {
         this.polyPart = p;
@@ -65,7 +78,11 @@ public class Complexity {
     }
    
     public void multiply(Complexity c) {
-        this.polyPart.times(c.getPoly());
+    	if (this.polyPart == null && c.getPoly() != null) {
+    		this.polyPart = c.getPoly();
+    	} else if (c.getPoly() != null) {
+    		this.polyPart = this.polyPart.times(c.getPoly());
+    	}
         // Don't change the log part
     }
    
@@ -226,6 +243,9 @@ class Polynomial {
    
         // return (a * b) which is just a multiplication of highest degrees
         public Polynomial times(Polynomial b) {
+        	if (b == null) {
+        		return this;
+        	}
             Polynomial c = new Polynomial(this.degree() + b.degree());
             return c;
         }

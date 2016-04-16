@@ -63,7 +63,7 @@ public class DSUsageContainer {
 	
 	public void addUsage(DSUsage dsu, Complexity loopComplexity) {
 		// Need to get the complexity of the usage
-		dsu.setComplexity(complexitiesRef.get(dsu.getUsageType()));
+		dsu.setComplexity(new Complexity(complexitiesRef.get(dsu.getUsageType())));
 		dsu.setCalcComplexity(loopComplexity);
 		this.usages.add(dsu);
 	}
@@ -93,8 +93,8 @@ public class DSUsageContainer {
 		}
 		return this.getVarName() + " - Type = " + this.getVarType() + 
 				"<" + generics + ">" + ls + 
-				"\t Usages = " + this.usagesToString() + 
-				"Total Complexity = " + getFinalComplexity();
+				"\t Usages = " + this.usagesToString() + ls +
+				"\t Total Complexity = " + getFinalComplexity();
 	}
 	
 	public void finalComplexityCalc() {
@@ -105,14 +105,6 @@ public class DSUsageContainer {
 	
 	public Complexity getFinalComplexity() {
 		return this.finalComplexity;
-	}
-	
-	public void buildMapping(ArrayList<DSUsage> usagesToMap) {
-		for (DSUsage dsu : usagesToMap) {
-			this.addUsage(new DSUsage(dsu.getUsageType(), dsu.getBeginLine(),
-					dsu.getEndLine()), new Complexity());
-		}
-		this.finalComplexityCalc();
 	}
 	
 	public int compareUsages(DSUsageContainer mapping) {
