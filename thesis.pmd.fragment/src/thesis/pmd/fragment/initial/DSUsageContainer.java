@@ -1,6 +1,7 @@
 package thesis.pmd.fragment.initial;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 
 /**
@@ -101,6 +102,22 @@ public class DSUsageContainer {
 		for (DSUsage dsu : usages) {
 			this.finalComplexity.add(dsu.getCalcComplexity());
 		}
+	}
+	
+	public ArrayList<Complexity> sortComplexities() {
+		ArrayList<Complexity> comps = new ArrayList<Complexity>();
+		for (DSUsage dsuc : usages) {
+			comps.add(new Complexity(dsuc.getCalcComplexity()));
+		}
+		// return Collections.sort(comps);
+		return null;
+	}
+	
+	public Complexity[] countCalcComplexity() {
+		// Create it assuming each complexity is of different order
+		Complexity[] calcComps = new Complexity[usages.size()];
+		
+		return calcComps;
 	}
 	
 	public Complexity getFinalComplexity() {

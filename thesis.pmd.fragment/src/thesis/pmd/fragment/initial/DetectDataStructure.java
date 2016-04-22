@@ -127,19 +127,25 @@ public class DetectDataStructure extends AbstractJavaRule {
     	int index = 0;
     	Complexity loopComplexity;
     	String varName = varAnalyse.getImage();
+    	if (getIndexOfDS(varName) != -1) {
+			// It is already in the ds list, move on to the next one
+    		return data;
+    	}
     	// Need to check if 'node' has a right side declaration (in-line declaration)
-    	ASTVariableInitializer avi = (ASTVariableInitializer) node.jjtGetParent().jjtGetChild(1);
-    	if (avi != null) {
-    		ASTClassOrInterfaceType coit = avi.getFirstDescendantOfType(ASTClassOrInterfaceType.class);
-    		if (coit != null) {
-    			dataStructures.add(new DSUsageContainer(varName,
-    					coit.getImage(), getGenericsTypes(coit)));
-    		}
-     	}
+    	// Need to check that node.jjtGetParent() isn't null first
+    	Node n = node.jjtGetParent();
+    	if (n != null) {
+	    	ASTVariableInitializer avi = (ASTVariableInitializer) n.jjtGetChild(1);
+	    	if (avi != null) {
+	    		ASTClassOrInterfaceType coit = avi.getFirstDescendantOfType(ASTClassOrInterfaceType.class);
+	    		if (coit != null) {
+	    			dataStructures.add(new DSUsageContainer(varName,
+	    					coit.getImage(), getGenericsTypes(coit)));
+	    		}
+	     	}
+    	}
     	// Loop through all occurrences of the variable
         for (NameOccurrence occurrence : node.getUsages()) {
-            // Will be null if the variable use is not in a loop
-        	loopComplexity = insideLoop(occurrence);
 //        		System.out.println("Inside loop on line: " + loopLine);
             String usage = occurrence.getLocation().getImage();
             index = usage.lastIndexOf('.');
@@ -178,9 +184,9 @@ public class DetectDataStructure extends AbstractJavaRule {
              * Will get different complexity results for iterators generated
              * from different types
              */
+        	int dsIndex = getIndexOfDS(varName);
             if (usage.equals("iterator")) {
-            	int dsIndex = getIndexOfDS(varName);
-            	handleIterator(occurrence, dsIndex);
+            	handleIterator(occurrence, dsIndex, false);
             	continue;
             }
             /* 
@@ -189,13 +195,15 @@ public class DetectDataStructure extends AbstractJavaRule {
              * from different types
              */
             if (usage.equals("listIterator")) {
-//            	handleListIterator();
+            	handleIterator(occurrence, dsIndex, true);
             	continue;
             }
+            // Will be empty Complexity if the variable use is not in a loop
+        	loopComplexity = insideLoop(occurrence, usage);
             DSUsage currentUsage = new DSUsage(usage,
             		occurrence.getLocation().getBeginLine(),
             		occurrence.getLocation().getEndLine());
-            dataStructures.get(getIndexOfDS(varName)).addUsage(currentUsage, loopComplexity);
+            dataStructures.get(dsIndex).addUsage(currentUsage, loopComplexity);
         }
         System.out.println("--- Variables in use ---");
         System.out.println("--- Size of Array: " + dataStructures.size() + " ---");
@@ -238,13 +246,13 @@ public class DetectDataStructure extends AbstractJavaRule {
         doComparison();
         return data;
     }
-    
-    /**
+
+	/**
      * 
      * @param occurrence
      * @param varType
      */
-    private void handleIterator(NameOccurrence occurrence, int dsIndex) {
+    private void handleIterator(NameOccurrence occurrence, int dsIndex, Boolean isListIterator) {
 		// Need to get the name of the Iterator variable (Actually don't care about this)
     	// Need to get the node for the Iterator variable
     	ASTLocalVariableDeclaration lvd = occurrence.getLocation().
@@ -253,20 +261,25 @@ public class DetectDataStructure extends AbstractJavaRule {
     		// Something went wrong
     		return;
     	}
-    	ASTVariableDeclaratorId test = (ASTVariableDeclaratorId) lvd.jjtGetChild(lvd.jjtGetNumChildren()-1).jjtGetChild(0);
-    	if (test == null) {
+    	ASTVariableDeclaratorId avdi = (ASTVariableDeclaratorId) lvd.jjtGetChild(lvd.jjtGetNumChildren()-1).jjtGetChild(0);
+    	if (avdi == null) {
     		// Something went wrong
     		return;
     	}
     	// Get the usages from the Iterator node (needs it's own visit implementation)
-    	iteratorVisit(test, dsIndex);
+    	iteratorVisit(avdi, dsIndex, isListIterator);
 	}
 
-	private void iteratorVisit(ASTVariableDeclaratorId avdi, int dsIndex) {
+	/**
+	 * Just like the visit method, but implemented only for Iterator and ListIterator types
+	 * @param avdi
+	 * @param dsIndex
+	 * @param isListIterator
+	 */
+    private void iteratorVisit(ASTVariableDeclaratorId avdi, int dsIndex, Boolean isListIterator) {
     	DSUsageContainer dsuc = dataStructures.get(dsIndex);
     	// Calculate Iterator complexity from the usages and varType
 		for (NameOccurrence no : avdi.getUsages()) {
-			Complexity loopComplexity = insideLoop(no);
 			ScopedNode node = no.getLocation();
 	        String usage = node.getImage();
 	        int index = usage.lastIndexOf('.');
@@ -274,8 +287,14 @@ public class DetectDataStructure extends AbstractJavaRule {
 	        	// something odd, skip this one
 	        	continue;
 	        }
-	        // Stored in the complexities hashMap as Iterator.methodName
-	        usage = "Iterator." + usage.substring(index+1, usage.length());
+	        if (isListIterator) {
+	        	// Stored in the complexities hashMap as ListIterator.methodName
+	    		usage = "ListIterator." + usage.substring(index+1, usage.length());
+	    	} else {
+	    		// Stored in the complexities hashMap as Iterator.methodName
+	    		usage = "Iterator." + usage.substring(index+1, usage.length());
+	    	}
+	        Complexity loopComplexity = insideLoop(no, usage);
 	        // Store the complexities with the other complexities for the original variable
 	        dsuc.addUsage(new DSUsage(usage, node.getBeginLine(), 
 	        		node.getEndLine()), loopComplexity);
@@ -365,7 +384,7 @@ public class DetectDataStructure extends AbstractJavaRule {
     	return type;
     }
     
-    private Complexity insideLoop(NameOccurrence occurrence) {
+    private Complexity insideLoop(NameOccurrence occurrence, String usage) {
         //Node n = occurrence.getLocation().jjtGetParent();
     	Complexity overallLoopComplexity = new Complexity();
         List<ASTDoStatement> doParents = occurrence.getLocation().getParentsOfType(ASTDoStatement.class);
@@ -375,7 +394,7 @@ public class DetectDataStructure extends AbstractJavaRule {
         	// Need to deal with Do statements later 
         }
         for (ASTWhileStatement n : whileParents) {
-        	overallLoopComplexity.multiply(getWhileDetails(n));
+        	overallLoopComplexity.multiply(getWhileDetails(n, usage));
         }
         for (ASTForStatement n : forParents) {
         	/*
@@ -388,7 +407,7 @@ public class DetectDataStructure extends AbstractJavaRule {
         	 */
         	if (n.hasDescendantOfType(ASTForInit.class)) {
         		overallLoopComplexity.multiply(getForInitDetails((ASTForInit) 
-        				n.getFirstChildOfType(ASTForInit.class), occurrence.getImage()));
+        				n.getFirstChildOfType(ASTForInit.class), occurrence.getImage(), usage));
         	} else {
         		overallLoopComplexity.multiply(getForStatementDetails(n));
         	}
@@ -417,8 +436,9 @@ public class DetectDataStructure extends AbstractJavaRule {
 	 *  while (fileReader.readLine != null) { ... }
      * 
      * @param n - ASTWhileStatement node
+     * @param usage 
      */
-    private Complexity getWhileDetails(Node n) {
+    private Complexity getWhileDetails(Node n, String usage) {
 		ASTRelationalExpression whileComp = (ASTRelationalExpression) 
 				n.getFirstDescendantOfType(ASTRelationalExpression.class);
 		if (whileComp == null) {
@@ -460,8 +480,9 @@ public class DetectDataStructure extends AbstractJavaRule {
 	 * run from beginning to end.
      * 
      * @param n - ForInit node
+	 * @param usage 
      */
-    private Complexity getForInitDetails(Node n, String varName) {
+    private Complexity getForInitDetails(Node n, String varName, String usage) {
     	Boolean isVar = false;
     	ASTPrimaryPrefix ppInit = (ASTPrimaryPrefix) n.getFirstDescendantOfType(ASTPrimaryPrefix.class);
     	ASTForStatement afs = (ASTForStatement) n.getFirstParentOfType(ASTForStatement.class);
@@ -481,7 +502,7 @@ public class DetectDataStructure extends AbstractJavaRule {
     	}
     	// This means the usage we're analysing is in the loop declaration
     	// and hence it's not actually inside the loop - so no loop complexity.
-    	if (upperBound.equals(varName + ".size")) {
+    	if (upperBound.equals(varName + "." + usage)) {
     		return new Complexity();
     	}
     	ASTPostfixExpression updateExp = (ASTPostfixExpression) afu.getFirstDescendantOfType(ASTPostfixExpression.class);
@@ -504,6 +525,7 @@ public class DetectDataStructure extends AbstractJavaRule {
 	 * This is of the form: for (type i : ds<type>)  
 	 * 
      * @param n - ASTForStatement node
+     * @param  
      */
     private Complexity getForStatementDetails(Node n) {
     	ASTExpression forExp = (ASTExpression) n.getFirstDescendantOfType(ASTExpression.class);
@@ -541,8 +563,12 @@ public class DetectDataStructure extends AbstractJavaRule {
     			Complexity compComplexity = compDSUC.getFinalComplexity();
     			// Complexities are the same
     			if (dsComplexity.compareTo(compComplexity) == 0) {
-    				System.out.println("Complexity the same for: " + dsuc.getVarName() +
-    						" of types: " + dsuc.getVarType() + " - " + compDSUC.getVarType());
+    				// Do additional analysis on the DS's as a final complexity isn't good enough
+    				System.out.println("Final Complexity Analysis is same. Beginning secondary analysis");
+    				// Get highest calculated complexity
+    				
+//    				System.out.println("Complexity the same for: " + dsuc.getVarName() +
+//    						" of types: " + dsuc.getVarType() + " - " + compDSUC.getVarType());
     			}
     			if (dsComplexity.compareTo(compComplexity) < 0) {
     				System.out.println("Complexity is better for: " + dsuc.getVarType() +
@@ -556,7 +582,9 @@ public class DetectDataStructure extends AbstractJavaRule {
     		}
     	}
     	System.out.println("----------------");
-    	System.out.println("----------------");
+    	// Clear the data structure lists so next comparison is fresh
+    	dataStructures.clear();
+    	comparisonStructures.clear();
     }
     
     public void execute(CurrentPath path) {

@@ -110,7 +110,7 @@ public final class JavaCollectionsComplexities {
 		put("ListIterator.nextIndex", new Complexity(null, new Polynomial(0), null)); // O(1)
 		put("ListIterator.previous", new Complexity(null, new Polynomial(0), null)); // O(1)
 		put("ListIterator.previousIndex", new Complexity(null, new Polynomial(0), null)); // O(1)
-		put("ListIterator.remove", new Complexity(null, new Polynomial(1), null)); // O(1) - Remove with Iterator
+		put("ListIterator.remove", new Complexity(null, new Polynomial(0), null)); // O(1) - Remove with Iterator
 		put("ListIterator.set", new Complexity(null, new Polynomial(0), null)); // O(1)
 	}};
 	
