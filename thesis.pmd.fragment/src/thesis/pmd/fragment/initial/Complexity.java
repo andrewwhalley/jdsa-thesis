@@ -218,6 +218,10 @@ public class Complexity {
         System.out.println("Comparing " + c3.toString() + " and " + c4.toString() + " --- " + c3.compareTo(c4));
         System.out.println("Comparing " + c1.toString() + " and " + c3.toString() + " --- " + c1.compareTo(c3));
         System.out.println("Constant: " + constant.toString());
+        
+        Complexity On = new Complexity(null, new Polynomial(1), null);
+        Complexity On2 = new Complexity(null, new Polynomial(2), null);
+        System.out.println("Comparing " + On2.toString() + " and " + On.toString() + " --- " + On2.compareTo(On));
     }
 }
 

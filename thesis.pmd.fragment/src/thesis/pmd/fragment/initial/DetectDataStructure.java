@@ -8,8 +8,10 @@ import net.sourceforge.pmd.lang.dfa.DataFlowNode;
 import net.sourceforge.pmd.lang.dfa.VariableAccess;
 import net.sourceforge.pmd.lang.dfa.pathfinder.CurrentPath;
 import net.sourceforge.pmd.lang.java.ast.ASTAllocationExpression;
+import net.sourceforge.pmd.lang.java.ast.ASTArgumentList;
 import net.sourceforge.pmd.lang.java.ast.ASTClassOrInterfaceDeclaration;
 import net.sourceforge.pmd.lang.java.ast.ASTClassOrInterfaceType;
+import net.sourceforge.pmd.lang.java.ast.ASTCompilationUnit;
 import net.sourceforge.pmd.lang.java.ast.ASTDoStatement;
 import net.sourceforge.pmd.lang.java.ast.ASTExpression;
 import net.sourceforge.pmd.lang.java.ast.ASTForInit;
@@ -44,6 +46,9 @@ public class DetectDataStructure extends AbstractJavaRule {
 	private RuleContext rc;
 	private ArrayList<DSUsageContainer> dataStructures;
 	private ArrayList<DSUsageContainer> comparisonStructures;
+	// Variable to store mappings between method names and the local and passed
+	// data structure name/type: (MethodName -> (methodVarName, passedVarType))
+	private HashMap<String, HashMap<String, String>> methodMaps;
 	
 	/**
 	 * Find the data structure based off it's name
@@ -64,6 +69,19 @@ public class DetectDataStructure extends AbstractJavaRule {
 			}
 		}
 		return index;
+	}
+	
+	/**
+	 * Quick method that takes a name of a data structure and returns
+	 * the type
+	 * @param DSName - name of data structure
+	 * @return Corresponding type of DS or "" if it's not initialised
+	 */
+	private String getVarType (String DSName) {
+		if (dataStructures == null) {
+			return "";
+		}
+		return dataStructures.get(getIndexOfDS(DSName)).getVarType();
 	}
 	
 	/**
@@ -118,6 +136,9 @@ public class DetectDataStructure extends AbstractJavaRule {
     	if (comparisonStructures == null) {
     		comparisonStructures = new ArrayList<DSUsageContainer>();
     	}
+    	if (methodMaps == null) {
+    		methodMaps = new HashMap<String, HashMap<String, String>>();
+    	}
     	VariableNameDeclaration varAnalyse = node.getNameDeclaration();
     	// List proof of concept
     	if ((!varAnalyse.getTypeImage().equals("List")) && (!varAnalyse.getTypeImage().equals("ArrayList"))
@@ -135,14 +156,17 @@ public class DetectDataStructure extends AbstractJavaRule {
     	// Need to check that node.jjtGetParent() isn't null first
     	Node n = node.jjtGetParent();
     	if (n != null) {
-	    	ASTVariableInitializer avi = (ASTVariableInitializer) n.jjtGetChild(1);
-	    	if (avi != null) {
-	    		ASTClassOrInterfaceType coit = avi.getFirstDescendantOfType(ASTClassOrInterfaceType.class);
-	    		if (coit != null) {
-	    			dataStructures.add(new DSUsageContainer(varName,
-	    					coit.getImage(), getGenericsTypes(coit)));
-	    		}
-	     	}
+    		// Make sure it is a right side declaration
+    		if (n.jjtGetNumChildren() > 1) {
+		    	ASTVariableInitializer avi = n.getFirstChildOfType(ASTVariableInitializer.class);
+		    	if (avi != null) {
+		    		ASTClassOrInterfaceType coit = avi.getFirstDescendantOfType(ASTClassOrInterfaceType.class);
+		    		if (coit != null) {
+		    			dataStructures.add(new DSUsageContainer(varName,
+		    					coit.getImage(), getGenericsTypes(coit)));
+		    		}
+		     	}
+    		}
     	}
     	// Loop through all occurrences of the variable
         for (NameOccurrence occurrence : node.getUsages()) {
@@ -151,13 +175,19 @@ public class DetectDataStructure extends AbstractJavaRule {
             index = usage.lastIndexOf('.');
             // This means that no method has been invoked on the data structure.
             if (index == -1) {
-            	// Check to see if it is a declaration or return value
+            	// Check to see if it is a declaration
             	if (getIndexOfDS(varName) == -1) {
             		// declaration
             		// get the generics type(s) for the DS
             		dataStructures.add(new DSUsageContainer(varName, 
             				getRuntimeType(occurrence), 
             				getGenericsTypes(occurrence.getLocation())));
+            		continue;
+            	}
+            	// Could be being passed to another method
+            	String[] methodName = checkIfMethodCall(occurrence.getLocation(), varName);
+            	if (methodName != null) {
+            		addToMap(methodName, node, varName);
             	}
             	// Could be a function returning the ds.
             	
@@ -166,16 +196,37 @@ public class DetectDataStructure extends AbstractJavaRule {
             // Need to check if it is a first usage but it is not a declaration
             // This can occur if the DS is passed to another function
             if (index != -1 && getIndexOfDS(varName) == -1) {
-            	// In runtime type need to match up with varName. Maybe create a new method all together to deal
-            	// with this specific situation... 
-            	ArrayList<String> types = getMethodParamType(occurrence, varName);
-            	if (types == null || types.isEmpty()) {
-            		// Something went wrong :|
+//            	// In runtime type need to match up with varName. Maybe create a new method all together to deal
+//            	// with this specific situation... 
+//            	ArrayList<String> types = getMethodParamType(occurrence, varName);
+//            	if (types == null || types.isEmpty()) {
+//            		// Something went wrong :|
+//            		break;
+//            	}
+//            	String runtimeType = types.remove(0);
+//            	dataStructures.add(new DSUsageContainer(varName, runtimeType,
+//            			types));
+            	
+            	// Need to get method name
+            	ASTMethodDeclarator amd = node.getFirstParentOfType(ASTMethodDeclarator.class);
+            	if (amd == null) {
+            		// weird stuff
             		break;
             	}
-            	String runtimeType = types.remove(0);
-            	dataStructures.add(new DSUsageContainer(varName, runtimeType,
-            			types));
+            	String methodName = amd.getImage();
+            	// then lookup method and varName in the hashMap to find variable type
+            	HashMap<String, String> mappedVars = methodMaps.get(methodName);
+            	if (mappedVars == null) {
+            		// Weird stuff
+            		break;
+            	}
+            	String varType = mappedVars.get(varName);
+            	if (varType == null) {
+            		// Weird stuff
+            		break;
+            	}
+            	dataStructures.add(new DSUsageContainer(varName, varType, 
+            			getGenericsTypes(occurrence.getLocation())));
             }
             // index is the '.' in myList.add() for example
             usage = usage.substring(index+1, usage.length());
@@ -246,6 +297,79 @@ public class DetectDataStructure extends AbstractJavaRule {
         doComparison();
         return data;
     }
+
+    private void addToMap(String[] methodName, ASTVariableDeclaratorId node,
+    		String varName) {
+    	// Is actually a method parameter
+		// Get root node to find all method declarators
+		ASTCompilationUnit rootNode = node.getFirstParentOfType(ASTCompilationUnit.class);
+		List<ASTMethodDeclarator> methods = rootNode.findDescendantsOfType(ASTMethodDeclarator.class);
+		for (ASTMethodDeclarator amd : methods) {
+			if (amd.getImage().equals(methodName[0])) {
+				// get the name of the parameter at position methodName[1] (safe parse, is always an int)
+				// children will be FormalParameters and then FormalParameter
+				Node parameters = amd.jjtGetChild(0).jjtGetChild(Integer.parseInt(methodName[1]));
+				if (parameters == null) {
+					// something weird happened
+					break;
+				}
+				ASTVariableDeclaratorId avdi = parameters.getFirstDescendantOfType(ASTVariableDeclaratorId.class);
+				if (avdi == null) {
+					// something weird happened
+					break;
+				}
+				String varType = getVarType(varName);
+				HashMap<String, String> getExisting = methodMaps.get(methodName[0]);
+				if (getExisting == null) {
+					// Put the values into the hashmap
+					methodMaps.put(methodName[0], new HashMap<String, String>(){{
+						put(avdi.getImage(), varType);
+					}});
+				} else {
+					getExisting.put(avdi.getImage(), varType);
+					// This step may be redundant (non-mutable)
+					methodMaps.put(methodName[0], getExisting);
+				}
+				break;
+			}
+		}
+		
+	}
+
+	/**
+     * Checks if there is a method call node with this variable as a parameter
+     * @param location
+     */
+	private String[] checkIfMethodCall(ScopedNode node, String varName) {
+		if (node == null) {
+			return null;
+		}
+		ASTArgumentList argumentParents = node.getFirstParentOfType(ASTArgumentList.class);
+		if (argumentParents == null) { 
+			return null;
+		}
+		// If we're here then it's a method. Get the name of the method
+		ASTPrimaryExpression ape = argumentParents.getFirstParentOfType(ASTPrimaryExpression.class);
+		if (ape == null) {
+			// Something weird has happened
+			return null;
+		}
+		ASTName methodName = ape.getFirstDescendantOfType(ASTName.class);
+		if (methodName == null) {
+			return null;
+		}
+		// Get the number of the parameter that we have 
+		List<ASTName> methodParams = argumentParents.findDescendantsOfType(ASTName.class);
+		int paramNumber = 0;
+		for (int i = 0; i < methodParams.size(); i++) {
+			if (methodParams.get(i).getImage().equals(varName)) {
+				// found it
+				paramNumber = i;
+				break;
+			}
+		}
+		return new String[] {methodName.getImage(), "" + paramNumber};
+	}
 
 	/**
      * 
@@ -335,6 +459,12 @@ public class DetectDataStructure extends AbstractJavaRule {
     	return dsType != null? dsType.getImage() : "";
     }
     
+    /**
+     * 
+     * @param occurrence
+     * @param varName
+     * @return
+     */
     private ArrayList<String> getMethodParamType(NameOccurrence occurrence, String varName) {
     	// Check the method parameters for a compatible class/interface
 		ASTMethodDeclaration amd = occurrence.getLocation().
@@ -384,14 +514,24 @@ public class DetectDataStructure extends AbstractJavaRule {
     	return type;
     }
     
+    /**
+     * Base method for determining if the usage is inside a loop
+     * and what sort of loop it is. Handle this in the appropriate
+     * methods
+     * 
+     * @param occurrence - the usage details (get node using getLocation)
+     * @param usage - the string repreenting the usage
+     * @return
+     */
     private Complexity insideLoop(NameOccurrence occurrence, String usage) {
         //Node n = occurrence.getLocation().jjtGetParent();
     	Complexity overallLoopComplexity = new Complexity();
-        List<ASTDoStatement> doParents = occurrence.getLocation().getParentsOfType(ASTDoStatement.class);
-        List<ASTWhileStatement> whileParents = occurrence.getLocation().getParentsOfType(ASTWhileStatement.class);
-        List<ASTForStatement> forParents = occurrence.getLocation().getParentsOfType(ASTForStatement.class);
+    	Node usageNode = occurrence.getLocation();
+        List<ASTDoStatement> doParents = usageNode.getParentsOfType(ASTDoStatement.class);
+        List<ASTWhileStatement> whileParents = usageNode.getParentsOfType(ASTWhileStatement.class);
+        List<ASTForStatement> forParents = usageNode.getParentsOfType(ASTForStatement.class);
         for (ASTDoStatement n : doParents) {
-        	// Need to deal with Do statements later 
+        	// Need to deal with Do statements later (will likely be same as while statement) 
         }
         for (ASTWhileStatement n : whileParents) {
         	overallLoopComplexity.multiply(getWhileDetails(n, usage));
@@ -537,6 +677,10 @@ public class DetectDataStructure extends AbstractJavaRule {
     	return new Complexity(new Polynomial(1));
     }
     
+    /**
+     * Method that compares the two data structure lists that have been
+     * built up (actual data structures vs possible data structures)
+     */
     private void doComparison() {
     	// TODO: Convert all of this into a report (dynamicreports or jasperreports)
     	// Probably dynamicreports
@@ -575,18 +719,22 @@ public class DetectDataStructure extends AbstractJavaRule {
     						" than: " + compDSUC.getVarType() + " - Variable: " + dsuc.getVarName());
     			}
     			if (dsComplexity.compareTo(compComplexity) > 0) {
-    				System.out.println("Complexity is worse for: " + compDSUC.getVarType() +
-    						" than: " + dsuc.getVarType() + " - Variable: " + dsuc.getVarName());
+    				System.out.println("Complexity is worse for: " + dsuc.getVarType() +
+    						" than: " + compDSUC.getVarType() + " - Variable: " + dsuc.getVarName());
     			}
     			
     		}
     	}
     	System.out.println("----------------");
     	// Clear the data structure lists so next comparison is fresh
-    	dataStructures.clear();
-    	comparisonStructures.clear();
+    	//dataStructures.clear();
+    	//comparisonStructures.clear();
     }
     
+    /**
+     * From super. Probably isn't necessary
+     * @param path
+     */
     public void execute(CurrentPath path) {
     	System.out.println("----");
     }
