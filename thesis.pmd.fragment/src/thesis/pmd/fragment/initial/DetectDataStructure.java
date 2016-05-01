@@ -123,14 +123,22 @@ public class DetectDataStructure extends AbstractJavaRule {
 		}
 		return false;
 	}
-
+	
 	/**
 	 * Visit is the main method that is called on this class.
-	 * Any Variable Declarator that is found in the code is explored
-	 * through this method.
+	 * Starting at the root node, get all the variable declarators
+	 * and explore them with the explore method.
 	 */
-    public Object visit(ASTVariableDeclaratorId node, Object data) {
-    	if (dataStructures == null) {
+	public Object visit(ASTCompilationUnit root, Object data) {
+		// ASTCompilationUnit is the root node
+		// Get all the ASTVariableDeclaratorId nodes
+		List<ASTVariableDeclaratorId> varDecs = 
+				root.findDescendantsOfType(ASTVariableDeclaratorId.class);
+		if (varDecs == null) {
+			// No variable declarators, return
+			return data;
+		}
+		if (dataStructures == null) {
     		dataStructures = new ArrayList<DSUsageContainer>();
     	}
     	if (comparisonStructures == null) {
@@ -139,18 +147,70 @@ public class DetectDataStructure extends AbstractJavaRule {
     	if (methodMaps == null) {
     		methodMaps = new HashMap<String, HashMap<String, String>>();
     	}
+		// Visit each variable declarator node using explore method (original)
+		for (ASTVariableDeclaratorId avdi : varDecs) {
+			explore(avdi);
+		}
+		System.out.println("--- Variables in use ---");
+        System.out.println("--- Size of Array: " + dataStructures.size() + " ---");
+        ArrayList<DSUsage> currCompUsages = null;
+        for (int i = 0; i < dataStructures.size(); i++) {
+        	DSUsageContainer dsuc = dataStructures.get(i);
+        	// Ignore and remove data structures with no usages
+        	if (dsuc.getUsages().isEmpty()) {
+        		// Decrement after removal so we don't skip one
+        		dataStructures.remove(i--);
+        		continue;
+        	}
+        	dsuc.finalComplexityCalc();
+//        	System.out.println(dsuc.toString());
+        	// Get the Data Structure(s) we can compare each usage against
+        	for (String s : JavaCollectionsComplexities.DSToCompareTo(dsuc.getVarType())) {
+        		System.out.println("Comparing DS: " + s);
+        		// Don't add to the comparison structure if it's already comparing the same name and type
+        		if (alreadyComparing(dsuc.getVarName(), s)) {
+        			continue;
+        		}
+        		// Name the variable in the comparison structure the same name as the original variable
+        		// This will help to setup the comparisons
+        		comparisonStructures.add(new DSUsageContainer(dsuc.getVarName(), s, dsuc.getGenTypes()));
+        	}
+        	// Do the comparison
+        	for (DSUsageContainer mapped : comparisonStructures) {
+        		// Skip this DSUsageContainer if it has previously been mapped
+        		if (!mapped.getUsages().isEmpty()) {
+        			continue;
+        		}
+        		// Need to get the related complexities
+        		currCompUsages = new ArrayList<DSUsage>(dsuc.getUsages());
+        		for (DSUsage dsu : currCompUsages) {
+        			mapped.addUsage(new DSUsage(dsu), new Complexity(dsu.getLoopComplexity()));
+        		}
+        		mapped.finalComplexityCalc();
+        	}
+        }
+        doComparison();
+		return data;
+	}
+
+	/**
+	 * Any Variable Declarator that is found in the code is explored
+	 * through this method. The data for the variable declarator will be
+	 * retrieved and added to a list for comparison later
+	 */
+    public void explore(ASTVariableDeclaratorId node) {
     	VariableNameDeclaration varAnalyse = node.getNameDeclaration();
     	// List proof of concept
     	if ((!varAnalyse.getTypeImage().equals("List")) && (!varAnalyse.getTypeImage().equals("ArrayList"))
     			&& (!varAnalyse.getTypeImage().equals("LinkedList"))) {
-    		return data;
+    		return;
     	}
     	int index = 0;
     	Complexity loopComplexity;
     	String varName = varAnalyse.getImage();
     	if (getIndexOfDS(varName) != -1) {
 			// It is already in the ds list, move on to the next one
-    		return data;
+    		return;
     	}
     	// Need to check if 'node' has a right side declaration (in-line declaration)
     	// Need to check that node.jjtGetParent() isn't null first
@@ -256,46 +316,6 @@ public class DetectDataStructure extends AbstractJavaRule {
             		occurrence.getLocation().getEndLine());
             dataStructures.get(dsIndex).addUsage(currentUsage, loopComplexity);
         }
-        System.out.println("--- Variables in use ---");
-        System.out.println("--- Size of Array: " + dataStructures.size() + " ---");
-        ArrayList<DSUsage> currCompUsages = null;
-        for (int i = 0; i < dataStructures.size(); i++) {
-        	DSUsageContainer dsuc = dataStructures.get(i);
-        	// Ignore and remove data structures with no usages
-        	if (dsuc.getUsages().isEmpty()) {
-        		// Decrement after removal so we don't skip one
-        		dataStructures.remove(i--);
-        		continue;
-        	}
-        	dsuc.finalComplexityCalc();
-//        	System.out.println(dsuc.toString());
-        	// Get the Data Structure(s) we can compare each usage against
-        	for (String s : JavaCollectionsComplexities.DSToCompareTo(dsuc.getVarType())) {
-        		System.out.println("Comparing DS: " + s);
-        		// Don't add to the comparison structure if it's already comparing the same name and type
-        		if (alreadyComparing(dsuc.getVarName(), s)) {
-        			continue;
-        		}
-        		// Name the variable in the comparison structure the same name as the original variable
-        		// This will help to setup the comparisons
-        		comparisonStructures.add(new DSUsageContainer(dsuc.getVarName(), s, dsuc.getGenTypes()));
-        	}
-        	// Do the comparison
-        	for (DSUsageContainer mapped : comparisonStructures) {
-        		// Skip this DSUsageContainer if it has previously been mapped
-        		if (!mapped.getUsages().isEmpty()) {
-        			continue;
-        		}
-        		// Need to get the related complexities
-        		currCompUsages = new ArrayList<DSUsage>(dsuc.getUsages());
-        		for (DSUsage dsu : currCompUsages) {
-        			mapped.addUsage(new DSUsage(dsu), new Complexity(dsu.getLoopComplexity()));
-        		}
-        		mapped.finalComplexityCalc();
-        	}
-        }
-        doComparison();
-        return data;
     }
 
     private void addToMap(String[] methodName, ASTVariableDeclaratorId node,
@@ -727,8 +747,8 @@ public class DetectDataStructure extends AbstractJavaRule {
     	}
     	System.out.println("----------------");
     	// Clear the data structure lists so next comparison is fresh
-    	//dataStructures.clear();
-    	//comparisonStructures.clear();
+    	dataStructures.clear();
+    	comparisonStructures.clear();
     }
     
     /**
