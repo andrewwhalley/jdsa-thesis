@@ -109,8 +109,8 @@ public class DSUsageContainer {
 		for (DSUsage dsuc : usages) {
 			comps.add(new Complexity(dsuc.getCalcComplexity()));
 		}
-		// return Collections.sort(comps);
-		return null;
+		Collections.sort(comps);
+		return comps;
 	}
 	
 	public Complexity[] countCalcComplexity() {

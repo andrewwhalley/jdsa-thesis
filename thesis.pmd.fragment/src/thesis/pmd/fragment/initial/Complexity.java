@@ -3,7 +3,7 @@ import java.util.*;
 import java.lang.*;
 
 
-public class Complexity {
+public class Complexity implements Comparable {
 	private String loopComp; // Variable for the loop complexity
     private Polynomial polyPart;
     private Logarithm logPart;
@@ -223,6 +223,15 @@ public class Complexity {
         Complexity On2 = new Complexity(null, new Polynomial(2), null);
         System.out.println("Comparing " + On2.toString() + " and " + On.toString() + " --- " + On2.compareTo(On));
     }
+
+	@Override
+	public int compareTo(Object o) {
+		if (!(o instanceof Complexity)) {
+			// Can't compare
+			return -1;
+		}
+		return this.compareTo((Complexity) o);
+	}
 }
 
 class Polynomial {

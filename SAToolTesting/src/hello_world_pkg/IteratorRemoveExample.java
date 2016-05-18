@@ -1,6 +1,5 @@
 package hello_world_pkg;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,10 +12,6 @@ public class IteratorRemoveExample {
 		for (int i=0; i < 100; i++) {
 			myList.add(addString + i);
 		}
-		List<String> copyList = new ArrayList<String>(myList);
-//		for (String s : copyList) {
-//			myList.add(s);
-//		}
 		
 		Iterator<String> myListIterator = myList.iterator();
 		while (myListIterator.hasNext()) {
