@@ -142,8 +142,6 @@ public class DetectDataStructure extends AbstractJavaRule {
 			explore(avdi);
 		}
 		// Begin Comparison
-		System.out.println("--- Variables in use ---");
-        System.out.println("--- Size of Array: " + dataStructures.size() + " ---");
         setupComparison();
         doComparison();
 		return data;
@@ -728,15 +726,18 @@ public class DetectDataStructure extends AbstractJavaRule {
     				switch (compVal) {
     				case -1:
     					// Complexity in original list is smaller than generated
-    					System.out.println("The data structure in use is likely the more efficient");
+    					System.out.println("The data structure in use is likely the more efficient.");
+    					System.out.println("The JDSA program recommends the use of: " + dsuc.getVarType());
     					break;
     				case 0:
     					// Complexities are the same
-    					System.out.println("The data structure usages are exactly equal");
+    					System.out.println("The data structure usages are exactly equal. Therefore the"
+    							+ " JDSA program cannot make a recommendation for this scenario.");
     					break;
     				case 1:
     					// Complexity in original list is larger than generated
     					System.out.println("The generated data structure may be more efficient for this scenario");
+    					System.out.println("The JDSA program recommends the use of: " + compDSUC.getVarType());
     					break;
     				}
 //    				System.out.println("Complexity the same for: " + dsuc.getVarName() +
@@ -745,15 +746,17 @@ public class DetectDataStructure extends AbstractJavaRule {
     			if (dsComplexity.compareTo(compComplexity) < 0) {
     				System.out.println("Complexity is better for: " + dsuc.getVarType() +
     						" than: " + compDSUC.getVarType() + " - Variable: " + dsuc.getVarName());
+    				System.out.println("The JDSA program recommends the use of: " + dsuc.getVarType());
     			}
     			if (dsComplexity.compareTo(compComplexity) > 0) {
     				System.out.println("Complexity is worse for: " + dsuc.getVarType() +
     						" than: " + compDSUC.getVarType() + " - Variable: " + dsuc.getVarName());
+    				System.out.println("The JDSA program recommends the use of: " + compDSUC.getVarType());
     			}
-    			
+    			System.out.println("----------------");
     		}
     	}
-    	System.out.println("----------------");
+    	
     	// Clear the data structure lists so next comparison is fresh
     	dataStructures.clear();
     	comparisonStructures.clear();

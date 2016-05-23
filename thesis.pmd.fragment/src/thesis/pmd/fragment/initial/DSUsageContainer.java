@@ -65,7 +65,8 @@ public class DSUsageContainer {
 	public void addUsage(DSUsage dsu, Complexity loopComplexity) {
 		// Need to get the complexity of the usage
 		dsu.setComplexity(new Complexity(complexitiesRef.get(dsu.getUsageType())));
-		dsu.setCalcComplexity(loopComplexity);
+		dsu.setLoopComplexity(loopComplexity);
+		dsu.setCalcComplexity();
 		this.usages.add(dsu);
 	}
 	

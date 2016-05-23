@@ -49,6 +49,7 @@ public final class JavaCollectionsComplexities {
 		put("size", new Complexity(null, new Polynomial(0), null)); // O(1)
 		put("subList", new Complexity(null, new Polynomial(1), null)); // O(n)
 		put("toArray", new Complexity(null, new Polynomial(1), null)); // O(n)
+		put("toString", new Complexity(null, new Polynomial(1), null)); // O(1)
 		put("trimToSize", new Complexity(null, new Polynomial(1), null)); // O(n)
 		
 		// Methods for the ArrayList iterator
@@ -97,6 +98,7 @@ public final class JavaCollectionsComplexities {
 		put("set", new Complexity(null, new Polynomial(1), null)); // O(n) (Has to find element before it can replace)
 		put("size", new Complexity(null, new Polynomial(0), null)); // O(1)
 		put("toArray", new Complexity(null, new Polynomial(1), null)); // O(1)
+		put("toString", new Complexity(null, new Polynomial(1), null)); // O(1)
 		
 		// Methods for the LinkedList Iterator
 		put("Iterator.hasNext", new Complexity(null, new Polynomial(0), null)); // O(1)

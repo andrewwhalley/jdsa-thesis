@@ -64,6 +64,10 @@ public class DSUsage {
 		this.complexity = new Complexity(comp);
 	}
 	
+	public void setLoopComplexity(Complexity comp) {
+		this.loopComplexity = new Complexity(comp);
+	}
+	
 	public Complexity getCalcComplexity() {
 		return this.calcComplexity;
 	}
@@ -72,8 +76,8 @@ public class DSUsage {
 		return this.loopComplexity;
 	}
 	
-	public void setCalcComplexity(Complexity C) {
-		this.loopComplexity = new Complexity(C);
+	public void setCalcComplexity() {
+		//this.loopComplexity = new Complexity(C);
 		// Get around immutability of Complexity
 		Complexity tempComp = new Complexity(this.complexity);
 		tempComp.multiply(this.loopComplexity);
