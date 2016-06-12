@@ -28,6 +28,7 @@ public class Complexity implements Comparable {
     	this.polyPart = C.polyPart;
     	this.expPart = C.expPart;
     	this.logPart = C.logPart;
+    	this.factPart = C.factPart;
     }
    
     public Complexity(Exponential e, Polynomial p, Logarithm l) {

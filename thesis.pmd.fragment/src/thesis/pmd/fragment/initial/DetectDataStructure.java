@@ -203,7 +203,6 @@ public class DetectDataStructure extends AbstractJavaRule {
             		addToMap(methodName, node, varName);
             	}
             	// Could be a function returning the ds.
-            	
             	continue;
             }
             // Need to check if it is a first usage but it is not a declaration
@@ -212,19 +211,19 @@ public class DetectDataStructure extends AbstractJavaRule {
             	// Need to get method name
             	ASTMethodDeclarator amd = node.getFirstParentOfType(ASTMethodDeclarator.class);
             	if (amd == null) {
-            		// weird stuff
+            		// method name not found
             		break;
             	}
             	String methodName = amd.getImage();
             	// then lookup method and varName in the hashMap to find variable type
             	HashMap<String, String> mappedVars = methodMaps.get(methodName);
             	if (mappedVars == null) {
-            		// Weird stuff
+            		// No mapping found
             		break;
             	}
             	String varType = mappedVars.get(varName);
             	if (varType == null) {
-            		// Weird stuff
+            		// No mapping found
             		break;
             	}
             	dataStructures.add(new DSUsageContainer(varName, varType, 
@@ -282,12 +281,12 @@ public class DetectDataStructure extends AbstractJavaRule {
 				// children will be FormalParameters and then FormalParameter
 				Node parameters = amd.jjtGetChild(0).jjtGetChild(Integer.parseInt(methodName[1]));
 				if (parameters == null) {
-					// something weird happened
+					// Shouldn't happen since we know there's a formal parameter node
 					break;
 				}
 				ASTVariableDeclaratorId avdi = parameters.getFirstDescendantOfType(ASTVariableDeclaratorId.class);
 				if (avdi == null) {
-					// something weird happened
+					// SHouldn't happen since we know there's a variable node
 					break;
 				}
 				String varType = getVarType(varName);
@@ -329,7 +328,7 @@ public class DetectDataStructure extends AbstractJavaRule {
 		// If we're here then it's a method. Get the name of the method
 		ASTPrimaryExpression ape = argumentParents.getFirstParentOfType(ASTPrimaryExpression.class);
 		if (ape == null) {
-			// Something weird has happened
+			// Shouldn't occur, but need to check to be safe
 			return null;
 		}
 		ASTName methodName = ape.getFirstDescendantOfType(ASTName.class);
@@ -350,22 +349,21 @@ public class DetectDataStructure extends AbstractJavaRule {
 	}
 
 	/**
-     * 
+     * Finds the node that corresponds to the Iterator so that it can be visited
      * @param occurrence
      * @param varType
      */
     private void handleIterator(NameOccurrence occurrence, int dsIndex, Boolean isListIterator) {
-		// Need to get the name of the Iterator variable (Actually don't care about this)
     	// Need to get the node for the Iterator variable
     	ASTLocalVariableDeclaration lvd = occurrence.getLocation().
     			getFirstParentOfType(ASTLocalVariableDeclaration.class);
     	if (lvd == null) {
-    		// Something went wrong
+    		// invalid AST for Iterator
     		return;
     	}
     	ASTVariableDeclaratorId avdi = (ASTVariableDeclaratorId) lvd.jjtGetChild(lvd.jjtGetNumChildren()-1).jjtGetChild(0);
     	if (avdi == null) {
-    		// Something went wrong
+    		// invalid AST for Iterator
     		return;
     	}
     	// Get the usages from the Iterator node (needs it's own visit implementation)
@@ -386,7 +384,7 @@ public class DetectDataStructure extends AbstractJavaRule {
 	        String usage = node.getImage();
 	        int index = usage.lastIndexOf('.');
 	        if (index == -1) {
-	        	// something odd, skip this one
+	        	// not found, skip this one
 	        	continue;
 	        }
 	        if (isListIterator) {
@@ -444,7 +442,7 @@ public class DetectDataStructure extends AbstractJavaRule {
     	}
     	
     	if (ase == null) {
-    		// I don't know if this will occur anymore
+    		// This shouldn't happen
     	}
     	
     	// Get the type declaration of the variable
@@ -459,7 +457,7 @@ public class DetectDataStructure extends AbstractJavaRule {
      * methods
      * 
      * @param occurrence - the usage details (get node using getLocation)
-     * @param usage - the string repreenting the usage
+     * @param usage - the string representing the usage
      * @return
      */
     private Complexity insideLoop(NameOccurrence occurrence, String usage) {
@@ -502,6 +500,7 @@ public class DetectDataStructure extends AbstractJavaRule {
      * @return Complexity associated with this Do statement
      */
     private Complexity getDoDetails(Node n, String usage) {
+    	// Not included for this thesis project
     	return new Complexity(new Polynomial(0));
     }
     
@@ -607,7 +606,6 @@ public class DetectDataStructure extends AbstractJavaRule {
 //    	} else if (ppInit.hasDescendantOfType(ASTName.class)) {
 //    		initial = ppInit.getFirstDescendantOfType(ASTName.class).getImage();
 //    	}
-    	// TODO: Apply initial and updateExp analysis to more accurately determine the loop complexity 
     	// check if upperbound is a digit (the first value is all we need to check. 
     	// If it is a digit this loop is constant time, otherwise it is O(m)
     	return isVar ? new Complexity(new Polynomial(1)) : new Complexity(new Polynomial(0)); 
@@ -727,17 +725,17 @@ public class DetectDataStructure extends AbstractJavaRule {
     				case -1:
     					// Complexity in original list is smaller than generated
     					System.out.println("The data structure in use is likely the more efficient.");
-    					System.out.println("The JDSA program recommends the use of: " + dsuc.getVarType());
+    					System.out.println("Therefore, we recommend the use of: " + dsuc.getVarType());
     					break;
     				case 0:
     					// Complexities are the same
-    					System.out.println("The data structure usages are exactly equal. Therefore the"
-    							+ " JDSA program cannot make a recommendation for this scenario.");
+    					System.out.println("The data structure usages are exactly equal. Therefore,"
+    							+ " we cannot make a recommendation for this scenario.");
     					break;
     				case 1:
     					// Complexity in original list is larger than generated
     					System.out.println("The generated data structure may be more efficient for this scenario");
-    					System.out.println("The JDSA program recommends the use of: " + compDSUC.getVarType());
+    					System.out.println("Therefore, we recommend the use of: " + compDSUC.getVarType());
     					break;
     				}
 //    				System.out.println("Complexity the same for: " + dsuc.getVarName() +
@@ -745,13 +743,15 @@ public class DetectDataStructure extends AbstractJavaRule {
     			}
     			if (dsComplexity.compareTo(compComplexity) < 0) {
     				System.out.println("Complexity is better for: " + dsuc.getVarType() +
-    						" than: " + compDSUC.getVarType() + " - Variable: " + dsuc.getVarName());
-    				System.out.println("The JDSA program recommends the use of: " + dsuc.getVarType());
+    						" (" + dsComplexity + ") than: " + compDSUC.getVarType() + " (" + 
+    						compComplexity + ") for the variable: " + dsuc.getVarName());
+    				System.out.println("Therefore, we recommend the use of: " + dsuc.getVarType());
     			}
     			if (dsComplexity.compareTo(compComplexity) > 0) {
     				System.out.println("Complexity is worse for: " + dsuc.getVarType() +
-    						" than: " + compDSUC.getVarType() + " - Variable: " + dsuc.getVarName());
-    				System.out.println("The JDSA program recommends the use of: " + compDSUC.getVarType());
+    						" (" + dsComplexity + ") than: " + compDSUC.getVarType() + " (" + 
+    						compComplexity + ") for the variable: " + dsuc.getVarName());
+    				System.out.println("Therefore, we recommend the use of: " + compDSUC.getVarType());
     			}
     			System.out.println("----------------");
     		}
